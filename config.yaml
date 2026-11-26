@@ -1,0 +1,198 @@
+
+# ==========================================
+# Allgemeine Einstellungen
+# ==========================================
+
+thermodynamics:
+  stoff: "Water"
+  model: "heos"       # einzig unterstütztes Backend
+
+
+
+limits:
+  max_points: 1000000
+  cache_max_mb: 2048        # RAM-Budget des Diagramm-Caches (aelteste Ergebnisse werden gemeldet verdraengt)
+  cache_warn_mb: 1536       # Warnschwelle (Statuszeile/Log)
+
+# Zustandsvergleich (Implementierung B): Zustandscache der angeklickten Punkte
+state_cache:
+  max_ram_states: 5000      # RAM-Budget (Anzahl Zustandsdatensaetze)
+  disk_enabled: false       # true: eine einzige stabile HDF5-Datei (benoetigt h5py), bei Folgelaeufen aktualisiert
+  disk_path: "cache/thermosurface_states.h5"
+  disk_threshold: 1000      # ab dieser Anzahl je Fluid/Raster wird in die Datei geschrieben
+# ==========================================
+# Berechnungsraster (aktuell nutzt main.py für die Fläche isotherm_grid)
+# ==========================================
+
+grid_points_creation:
+  isotherm_grid:
+    T_start_isotherm : 600.0
+    T_stop_isotherm  : 1200.0 
+    T_step_isotherm  : 10
+    v_start_isotherm : 0.8e-5
+    v_stop_isotherm  : 6.0e-4 
+    v_step_isotherm  : 5.0e-6
+
+  isochore_grid:
+    v_start_isochore : 0.1e-3
+    v_stop_isochore  : 1.0e-3 
+    v_step_isochore  : 0.1e-3
+    T_start_isochore : 300.0
+    T_stop_isochore  : 400.0 
+    T_step_isochore  : 10.0
+
+  isobare_grid:
+    p_start_isobare : 1.0e6
+    p_stop_isobare  : 10.0e6 
+    p_step_isobare  : 1.0e6
+    T_start_isobare : 300.0
+    T_stop_isobare  : 400.0 
+    T_step_isobare  : 10.0
+
+  binodale_grid:
+    T_start_sat : 300.0
+    T_stop_sat  : 400.0 
+    T_step_sat  : 50.0
+
+  spinodale_grid:
+    T_start_spinodal: 580.0 # Temperaturbereich der Berechnung, stoffabhaengig begrenzt
+    T_stop_spinodal : 647.0
+    n_T: 250                 # Temperaturstuetzstellen fuer den Dampfspinodal-Solver
+    n_scan: 200              # Dichtestuetzstellen je Temperatur (adaptive Verdichtung)
+    residual_tolerance: 1.0e-8  # dimensionslose interne Solverresiduen
+
+
+
+visu_points_creation:
+  isotherm_visu:
+    T_start_isotherm: 580.0
+    T_stop_isotherm: 1200.0
+    T_step_isotherm: 20.0
+
+    v_start_isotherm: 1.8e-5
+    v_stop_isotherm: 6.0e-4
+    v_step_isotherm: 5.0e-6
+
+  isochore_visu:
+    v_start_isochore: 2.3e-5
+    v_stop_isochore: 6.0e-4
+    v_step_isochore: 8.0e-5
+
+    T_start_isochore: 580.0
+    T_stop_isochore: 701.0
+    T_step_isochore: 4.0
+
+  isobare_visu:
+    p_start_isobare: 8.0e6
+    p_stop_isobare: 28.0e6
+    p_step_isobare: 4.0e6
+
+    T_start_isobare: 580.0
+    T_stop_isobare: 701.0
+    T_step_isobare: 4.0
+
+  binodale_visu:
+    T_start_sat: 580.0
+    T_stop_sat: 647.0
+    T_step_sat: 2.0
+
+  spinodale_visu:
+    T_start_spinodal: 580.0
+    T_stop_spinodal: 647.0
+    
+  two_phase_visu:
+    Q_points: 40
+    p_start_twophase: 5.0e6   # Zweiphasenfläche (p-v-T) nur zwischen diesen Drücken [Pa]; Auto-Wert: p_sat(T_start_sat)
+    p_stop_twophase: 2.2064e7 # Auto-Wert: kritischer Druck pc
+
+
+
+# ==========================================
+# Zusatzdiagramme - nur fuer h-s-p und u-v-T.
+# n_quality weiter aus visu_points_creation.two_phase_visu.Q_points.
+# ==========================================
+diagram_settings:
+  pvt:
+    pressure_axis: "asinh"  # Alternative: "asinh" (zeigt auch p <= 0)
+    include_homogeneous: true
+    homogeneous_points: 200
+    include_unstable: true  # Nur nach HEOS-Stabilitaetsfreigabe aktivieren
+    include_replacement: true     # Ersatzflaeche (Modell, KEINE EOS-Auswertung) zwischen den HEOS-Spinodalen; Voreinstellung der Darstellung
+    replacement_points: 40        # Stuetzpunkte je Temperaturzeile der Ersatzflaeche
+    auto_pressure_axis: true      # log -> symlog, falls homogene Flaechen p <= 0 enthalten (mit sichtbarem Hinweis)
+    unstable_scan_points: 256     # AP19: Scan je Isotherme zur Bestimmung der zusammenhaengenden instabilen Aeste
+    critical_refinement_rows: 4   # AP20.6: Zusatz-T-Zeilen Tc-(Tc-T_letzte)/2^k nur fuer homogene Flaechen (0 = aus)
+    close_critical_point: false   # AP20.6: Dreiecksfaecher zum kritischen Punkt (nur wirksam, wenn validiert)
+    # TS-VP03: Isolinienwerte als geometrische Progression x[n+1] = factor * x[n] (x0 = start, solange x <= stop).
+    # start/stop in SI (T [K], v [m3/mol], p [Pa]); "auto" = Bereich des Diagramms (p-v-T: Darstellungsparameter
+    # isotherm_visu/isochore_visu/isobare_visu). Hinweis: factor 3.14 ergibt nur wenige Isothermen; kleinere
+    # Faktoren (z. B. 1.1) erzeugen dichtere Scharen. Abtastpunkte je Linie bleiben getrennt (n_T, n_v, n_p ...).
+    isolines:
+      isothermen: {start: auto, stop: auto, factor: 1.1}
+      isochoren:  {start: auto, stop: auto, factor: 1.5}
+      isobaren:   {start: auto, stop: auto, factor: 1.5}
+  pht:
+    include_isolines: true
+    isolines:
+      isothermen: {start: auto, stop: auto, factor: 1.1}
+      isochoren:  {start: auto, stop: auto, factor: 1.5}
+      isobaren:   {start: auto, stop: auto, factor: 1.5}
+  pst:
+    include_isolines: true
+    isolines:
+      isothermen: {start: auto, stop: auto, factor: 1.1}
+      isochoren:  {start: auto, stop: auto, factor: 1.5}
+      isobaren:   {start: auto, stop: auto, factor: 1.5}
+  hsp:
+    n_T_sub: 45
+    n_T_super: 25
+    n_p: 41
+    critical_refinement: 1.5
+    include_isolines: true
+    isolines:
+      isothermen: {start: auto, stop: auto, factor: 1.1}
+      isochoren:  {start: auto, stop: auto, factor: 1.5}
+      isobaren:   {start: auto, stop: auto, factor: 1.5}
+
+  uvt:
+    n_T_sub: 45
+    n_T_super: 25
+    n_v: 41
+    critical_refinement: 1.5
+    include_isolines: true
+    isolines:
+      isothermen: {start: auto, stop: auto, factor: 1.1}
+      isochoren:  {start: auto, stop: auto, factor: 1.5}
+      isobaren:   {start: auto, stop: auto, factor: 1.5}
+
+  # g-p-T: g = h - T*s (J/kg) ueber (p, T). Zweiphasengebiet = Saettigungslinie (keine Flaeche).
+  gpt:
+    n_T_sub: 45
+    n_T_super: 25
+    n_p: 41
+    critical_refinement: 1.5
+    include_isolines: true
+    isolines:
+      isothermen: {start: auto, stop: auto, factor: 1.1}
+      isochoren:  {start: auto, stop: auto, factor: 1.5}
+      isobaren:   {start: auto, stop: auto, factor: 1.5}
+    include_homogeneous: true     # homogene HEOS-Ebenen (metastabil/instabil) und Spinodalen, in der GUI standardmaessig aus
+    homogeneous_points: 20        # Stuetzpunkte je Temperaturzeile der homogenen Ebenen
+    include_unstable: true        # instabile Fortsetzung (nur Knoten, die die p-v-T-Stabilitaetspruefung bestehen)
+    pressure_axis: "log"          # log | asinh | symlog | linear; 'log' zeigt homogene Knoten nur im berechneten Druckfenster (Hinweis in der Statuszeile)
+    auto_pressure_axis: false     # true: 'log' wird automatisch auf 'symlog' umgestellt, falls homogene Knoten ausserhalb des Fensters liegen
+
+  # f-v-T: f = u - T*s (J/kg) ueber (v_molar, T). Zweiphasengebiet = Regelflaeche (gemeinsame Tangente).
+  fvt:
+    n_T_sub: 45
+    n_T_super: 25
+    n_v: 41
+    critical_refinement: 1.5
+    include_isolines: true
+    include_homogeneous: true
+    homogeneous_points: 20
+    include_unstable: true
+    isolines:
+      isothermen: {start: auto, stop: auto, factor: 1.1}
+      isochoren:  {start: auto, stop: auto, factor: 1.5}
+      isobaren:   {start: auto, stop: auto, factor: 1.5}

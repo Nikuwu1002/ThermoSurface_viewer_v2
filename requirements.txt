@@ -1,0 +1,10 @@
+numpy
+scipy>=1.9
+CoolProp
+PyYAML
+PySide6
+pyvista
+pyvistaqt
+matplotlib
+# optional: Plattencache der Zustandsdatenbank (config.yaml: state_cache.disk_enabled); ohne h5py laeuft alles im RAM
+# h5py
